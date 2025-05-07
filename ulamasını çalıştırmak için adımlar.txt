@@ -1,6 +1,4 @@
-# Web-Socket-Chat-App
-PHP 
-uygulamayı çalıştırmak için adımlar:
+gulamasını çalıştırmak için adımlar:
 
 İlk olarak WebSocket sunucusunu başlatın:
 CopyInsert

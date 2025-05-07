@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Socket Chat</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --wa-bg: #eae6df;
+            --wa-green: #00a884;
+            --wa-panel: #f0f2f5;
+            --wa-hover: #f5f6f6;
+            --wa-text: #111b21;
+            --wa-icon: #54656f;
+            --wa-msg-out: #d9fdd3;
+            --wa-msg-in: #fff;
+            --wa-border: #e9edef;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Segoe UI, Helvetica Neue, Helvetica, Lucida Grande, Arial, Ubuntu, Cantarell, Fira Sans, sans-serif;
+            background-color: var(--wa-bg);
+            color: var(--wa-text);
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            max-width: 1600px;
+            height: 100vh;
+            margin: 0 auto;
+            display: flex;
+            padding: 20px;
+        }
+        
+        .users-panel {
+            width: 400px;
+            background: var(--wa-panel);
+            border-right: 1px solid var(--wa-border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .current-user {
+            padding: 15px;
+            background: var(--wa-panel);
+            border-bottom: 1px solid var(--wa-border);
+            display: none;
+        }
+
+        .current-user .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .current-user img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+
+        .current-user .name {
+            font-weight: bold;
+            color: var(--wa-text);
+        }
+
+        .current-user .status {
+            font-size: 0.9em;
+            color: var(--wa-green);
+        }
+        
+        .user-header {
+            padding: 10px 16px;
+            background: var(--wa-panel);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 60px;
+        }
+        
+        .user-header .profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .user-header .profile img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+        
+        .user-header .actions {
+            display: flex;
+            gap: 15px;
+            color: var(--wa-icon);
+        }
+        
+        .user-search {
+            padding: 8px 12px;
+            background: var(--wa-panel);
+        }
+        
+        .search-container {
+            background: white;
+            border-radius: 8px;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .search-container i {
+            color: var(--wa-icon);
+        }
+        
+        .search-container input {
+            border: none;
+            outline: none;
+            width: 100%;
+            font-size: 15px;
+        }
+        
+        .user-list {
+            flex: 1;
+            overflow-y: auto;
+            background: white;
+        }
+        
+        .user-item {
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 1px solid var(--wa-border);
+        }
+        
+        .user-item:hover {
+            background: var(--wa-hover);
+        }
+        
+        .user-item.active {
+            background: var(--wa-hover);
+        }
+        
+        .user-item img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+        }
+        
+        .user-item .user-info {
+            flex: 1;
+        }
+        
+        .user-item .user-info .name {
+            font-weight: 500;
+            margin-bottom: 3px;
+        }
+        
+        .user-item .user-info .last-message {
+            font-size: 14px;
+            color: var(--wa-icon);
+        }
+        
+        .chat-panel {
+            flex: 1;
+            background: #f0f2f5;
+            background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chat-header {
+            padding: 10px 16px;
+            background: var(--wa-panel);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 60px;
+            border-left: 1px solid var(--wa-border);
+        }
+        
+        .chat-header .chat-user {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .chat-header .chat-user img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+        
+        .chat-header .chat-actions {
+            display: flex;
+            gap: 15px;
+            color: var(--wa-icon);
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .message {
+            max-width: 65%;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            position: relative;
+            word-wrap: break-word;
+        }
+        
+        .message.received {
+            background: var(--wa-msg-in);
+            margin-right: auto;
+            border-top-left-radius: 0;
+        }
+        
+        .message.sent {
+            background: var(--wa-msg-out);
+            margin-left: auto;
+            border-top-right-radius: 0;
+        }
+        
+        .message .time {
+            font-size: 11px;
+            color: var(--wa-icon);
+            margin-left: 8px;
+            float: right;
+        }
+        
+        .message .status {
+            margin-left: 4px;
+            color: var(--wa-icon);
+        }
+        
+        .chat-input {
+            padding: 10px 16px;
+            background: var(--wa-panel);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .chat-input input {
+            flex: 1;
+            padding: 9px 12px;
+            border: none;
+            outline: none;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+        
+        .chat-input .actions {
+            display: flex;
+            gap: 15px;
+            color: var(--wa-icon);
+        }
+        
+        .typing-indicator {
+            padding: 0 16px;
+            color: var(--wa-green);
+            font-size: 13px;
+        }
+        
+        #loginForm {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--wa-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .login-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .login-container h3 {
+            color: var(--wa-green);
+            margin-bottom: 20px;
+        }
+        
+        .login-container input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid var(--wa-border);
+            border-radius: 4px;
+            outline: none;
+        }
+        
+        .login-container button {
+            background: var(--wa-green);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        .login-container button:hover {
+            opacity: 0.9;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 15px;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+        .message.sent {
+            background-color: #2f4716;
+            color: white;
+            margin-left: auto;
+        }
+        .message.received {
+            background-color: #e4e6eb;
+            color: black;
+        }
+        input[type="text"] {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            flex: 1;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4a4444;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #192128;
+        }
+        .user-item {
+            padding: 10px;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .user-item:hover {
+            background-color: #f0f2f5;
+        }
+        .user-item.active {
+            background-color: #e4e6eb;
+        }
+        .username-form {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="users-panel">
+            <div class="username-form">
+                
+                <input type="text" id="username" placeholder="Kullanıcı adınız">
+                <button onclick="setUsername()">GİRİŞ</button>
+            </div>
+            
+            <div class="current-user" id="currentUser">
+                <div class="user-info">
+                    <img id="userAvatar" src="" alt="avatar">
+                    <div>
+                        <div class="name" id="currentUsername"></div>
+                        <div class="status">çevrimiçi</div>
+                    </div>
+                </div>
+            </div>
+            <h3 style="display: none;" id="usersTitle">Sohbetler</h3>
+            <div id="usersList"></div>
+        </div>
+        <div class="chat-panel">
+            <div class="chat-header" id="chatHeader"></div>
+            <div class="chat-messages" id="messages"></div>
+            <div class="chat-input">
+                <input type="text" id="messageInput" placeholder="Mesajınızı yazın...">
+                <button onclick="sendMessage()">Gönder</button>
+            </div>
+            <div id="typingStatus" class="typing-indicator"></div>
+        </div>
+    </div>
+
+    <script>
+        let ws;
+        let selectedUser = null;
+        let currentUsername = '';
+        let typingTimeout;
+        let lastTypingStatus = false;
+        let notificationPermission = false;
+        globalThis.messagesByUser = {};
+
+        // Sayfa yüklendiğinde
+        window.onload = function() {
+            // Bildirim izni iste
+            requestNotificationPermission();
+
+            // Enter tuşuna basıldığında kullanıcı adını kaydet
+            document.getElementById('username').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    setUsername();
+                }
+            });
+
+            // Mesaj gönderme için Enter tuşu
+            document.getElementById('messageInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+        };
+
+        // Bildirim izni iste
+        async function requestNotificationPermission() {
+            try {
+                const permission = await Notification.requestPermission();
+                notificationPermission = permission === 'granted';
+                console.log('Bildirim izni:', permission);
+            } catch (error) {
+                console.error('Bildirim izni alınamadı:', error);
+            }
+        }
+
+        // Bildirim gönder
+        function showNotification(title, body) {
+            if (notificationPermission && document.hidden) {
+                try {
+                    const notification = new Notification(title, {
+                        body: body,
+                        icon: 'https://cdn-icons-png.flaticon.com/512/847/847969.png'
+                    });
+
+                    
+                    notification.onclick = function() {
+                        window.focus();
+                        notification.close();
+                    };
+                    setTimeout(() => notification.close(), 5000);
+                } catch (error) {
+                    console.error('Bildirim gösterilemedi:', error);
+                }
+            }
+        }
+
+        function connect() {
+            ws = new WebSocket('ws://localhost:8080');
+            
+            ws.onopen = () => {
+                console.log('WebSocket bağlantısı kuruldu');
+                if (currentUsername) {
+                    ws.send(JSON.stringify({
+                        type: 'join',
+                        username: currentUsername
+                    }));
+                }
+            };
+            
+            ws.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                console.log('Mesaj alındı:', data);
+                
+                switch (data.type) {
+                    case 'user_list':
+                        updateUsersList(data.users);
+                        break;
+                    case 'private_message':
+                        displayMessage(data);
+                        if (data.fromUsername !== currentUsername && (!selectedUser || selectedUser !== data.from)) {
+                            showNotification(data.fromUsername, data.message);
+                        }
+                        break;
+                    case 'typing_status':
+                        updateTypingStatus(data);
+                        break;
+                    case 'message_status':
+                        updateMessageStatus(data);
+                        break;
+                }
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket hatası:', error);
+            };
+            
+            ws.onclose = () => {
+                console.log('Bağlantı kapandı, yeniden bağlanılıyor...');
+                setTimeout(connect, 1000);
+            };
+        }
+
+        function setUsername() {
+            const usernameInput = document.getElementById('username');
+            const username = usernameInput.value.trim();
+            
+            if (username) {
+                currentUsername = username;
+                
+                // Kullanıcı bilgilerini güncellemek için
+                document.getElementById('currentUsername').textContent = username;
+                document.getElementById('userAvatar').src = 'https://cdn-icons-png.flaticon.com/512/847/847969.png';
+
+                // Profil panelini görünürlüğü için 
+                document.querySelector('.current-user').style.display = 'block';
+                
+                // Giriş formunu gizlemek için
+                document.querySelector('.username-form').style.display = 'none';
+                
+                // Kullanıcı listesi başlığını göstermek için
+                document.querySelector('#usersTitle').style.display = 'block';
+                
+                // WebSocket bağlantısını başlatmak için
+                connect();
+            } else {
+                alert('Lütfen bir kullanıcı adı girin!');
+            }
+        }
+
+        function updateUsersList(users) {
+            const usersList = document.getElementById('usersList');
+            usersList.innerHTML = '';
+            
+            users.forEach(user => {
+                if (user.username !== currentUsername) {
+                    const div = document.createElement('div');
+                    div.className = 'user-item';
+                    div.setAttribute('data-userid', user.id);
+                    div.setAttribute('data-username', user.username);
+                    div.innerHTML = `
+                        <img src="${user.avatar}" alt="${user.username}">
+                        <div class="user-info">
+                            <div class="name">${user.username}</div>
+                            <div class="last-message">${user.online ? '<span class="online">çevrimiçi</span>' : `son görülme: ${user.last_seen}`}</div>
+                        </div>
+                    `;
+                    div.onclick = () => selectUser(user.id, user.username);
+                    if (selectedUser === user.id) {
+                        div.classList.add('active');
+                    }
+                    usersList.appendChild(div);
+                }
+            });
+        }
+
+        function selectUser(userId, username) {
+            selectedUser = userId;
+            // chatHeader'da avatar ve isim göster
+            const usersList = document.getElementById('usersList');
+            const userDiv = usersList.querySelector(`.user-item[data-userid="${userId}"]`);
+            const chatHeader = document.getElementById('chatHeader');
+            if (userDiv) {
+                const avatar = userDiv.querySelector('img').src;
+                chatHeader.innerHTML = `<img src="${avatar}" style="width:32px;height:32px;border-radius:50%;margin-right:10px;vertical-align:middle;"><center>${username}</center>`;
+            } else {
+                chatHeader.textContent = `Sohbet - ${username}`;
+            }
+            displayMessagesForUser(userId);
+            document.querySelectorAll('.user-item').forEach(item => {
+                if (item.getAttribute('data-userid') === String(userId)) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        }
+
+        function displayMessagesForUser(userId) {
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML = '';
+            const msgs = messagesByUser[userId] || [];
+            msgs.forEach(msg => displayMessage(msg, false));
+        }
+
+        function displayMessage(data, save = true) {
+            const messages = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = `message ${data.fromUsername === currentUsername ? 'sent' : 'received'}`;
+
+            const messageContent = document.createElement('span');
+            messageContent.textContent = data.message;
+            div.appendChild(messageContent);
+
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'time';
+            timeSpan.textContent = data.timestamp;
+
+            if (data.fromUsername === currentUsername) {
+                const statusSpan = document.createElement('span');
+                statusSpan.className = 'status';
+                statusSpan.innerHTML = getStatusIcon(data.status);
+                timeSpan.appendChild(statusSpan);
+            } else if (data.id) {
+                sendReadReceipt(data.id, data.from);
+            }
+            div.appendChild(timeSpan);
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+            // Mesajı ilgili kullanıcıya kaydet
+            if (save) {
+                const otherUser = data.fromUsername === currentUsername ? data.to : data.from;
+                if (!messagesByUser[otherUser]) messagesByUser[otherUser] = [];
+                messagesByUser[otherUser].push(data);
+            }
+        }
+
+        // Seçili kullanıcıya mesaj gönderme işlemi
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            if (message && selectedUser) {
+                const messageData = {
+                    type: 'private_message',
+                    message: message,
+                    to: selectedUser
+                };
+                ws.send(JSON.stringify(messageData));
+                input.value = '';
+                clearTimeout(typingTimeout);
+                if (lastTypingStatus) {
+                    ws.send(JSON.stringify({
+                        type: 'typing_status',
+                        to: selectedUser,
+                        isTyping: false
+                    }));
+                    lastTypingStatus = false;
+                }
+            }
+        }
+
+        // Mesaj okundu bildirimi için
+        function sendReadReceipt(messageId, fromUser) {
+            if (ws && messageId && fromUser) {
+                ws.send(JSON.stringify({
+                    type: 'message_status',
+                    status: 'seen',
+                    messageId: messageId,
+                    to: fromUser
+                }));
+            }
+        }
+
+        function updateTypingStatus(data) {
+            // Kullanıcıya özel yazıyor bilgisi
+            const typingStatus = document.getElementById('typingStatus');
+            if (data.isTyping && data.fromUsername !== currentUsername) {
+                typingStatus.textContent = `${data.fromUsername} yazıyor...`;
+                typingStatus.style.display = 'block';
+            } else {
+                typingStatus.textContent = '';
+                typingStatus.style.display = 'none';
+            }
+        }
+
+        function updateMessageStatus(data) {
+            // Mesajın okundu/teslim edildi durumunu güncelle
+            const messages = document.getElementById('messages');
+            if (!messages) return;
+            // Son gönderilen mesajı bul ve durumunu güncelle
+            const sentMessages = messages.querySelectorAll('.message.sent .status');
+            if (sentMessages.length > 0) {
+                sentMessages[sentMessages.length - 1].innerHTML = getStatusIcon(data.status);
+            }
+        }
+
+        function getStatusIcon(status) {
+            switch(status) {
+                case 'sent':
+                    return '<i class="bi bi-check"></i>';
+                case 'delivered':
+                    return '<i class="bi bi-check-all"></i>';
+                case 'read':
+                    return '<i class="bi bi-check-all" style="color: #53bdeb;"></i>';
+                default:
+                    return '';
+            }
+        }
+
+        // Yazma durumunu kontrol etmek için
+        const messageInput = document.getElementById('messageInput');
+        if (messageInput) {
+            messageInput.addEventListener('input', function() {
+                if (selectedUser) {
+                    if (!lastTypingStatus) {
+                        ws.send(JSON.stringify({
+                            type: 'typing_status',
+                            to: selectedUser,
+                            isTyping: true
+                        }));
+                        lastTypingStatus = true;
+                    }
+                    clearTimeout(typingTimeout);
+                    typingTimeout = setTimeout(function() {
+                        ws.send(JSON.stringify({
+                            type: 'typing_status',
+                            to: selectedUser,
+                            isTyping: false
+                        }));
+                        lastTypingStatus = false;
+                    }, 1000);
+                }
+            });
+        }
+
+        // Bağlantıyı başlatma işlemi
+        connect();
+    </script>
+</body>
+</html>
